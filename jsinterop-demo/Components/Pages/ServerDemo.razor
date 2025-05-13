@@ -1,0 +1,111 @@
+@page "/server"
+@rendermode RenderMode.InteractiveServer
+@implements IAsyncDisposable
+
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Server Demo</PageTitle>
+
+<div class="mb-5">
+    <select @onchange="SetTitle" class="form-select">
+        <option value="">Select your favorite kind of rock...</option>
+        <option value="Limestone 🪨">Limestone</option>
+        <option value="Granite 🪨">Granite</option>
+        <option value="Sandstone 🪨">Sandstone</option>
+    </select>
+</div>
+
+<div class="mb-5">
+    <p>
+        <button @onclick="GetTitle" class="btn btn-primary me-2">Get current title</button>
+        <span>@Title</span>
+    </p>
+</div>
+
+<div class="mb-5">
+    <p>
+        <button @onclick="InitChart" class="btn btn-primary me-2">Show chart</button>
+        <button @onclick="UpdateChart" class="btn btn-primary">Update chart</button>
+    </p>
+    <canvas @ref="ChartCanvas" style="height: 500px; width: 500px;"></canvas>
+</div>
+
+@code {
+    string Title { get; set; } = "";
+    ElementReference ChartCanvas { get; set; }
+    IJSObjectReference? ChartRef { get; set; }
+
+    async Task SetTitle(ChangeEventArgs e)
+    {
+        @* await JSRuntime.InvokeVoidAsync("MyLibrary.setDocumentTitle", e.Value); *@
+        await JSRuntime.SetValueAsync("document.title", e.Value);
+    }
+
+    async Task GetTitle()
+    {
+        @* Title = await JSRuntime.InvokeAsync<string>("MyLibrary.getDocumentTitle"); *@
+        Title = await JSRuntime.GetValueAsync<string>("document.title");
+    }
+
+    async Task InitChart()
+    {
+        var chartModel = GetChartModel();
+
+        @* ChartRef = await JSRuntime.InvokeAsync<IJSObjectReference>("MyLibrary.initChart", ChartCanvas, chartModel); *@
+        ChartRef = await JSRuntime.InvokeNewAsync("Chart", ChartCanvas, chartModel);
+    }
+
+    async Task UpdateChart()
+    {
+        if (ChartRef is not null)
+        {
+            await ChartRef.SetValueAsync("options.title.text", "BIRD STATS!");
+            await ChartRef.InvokeVoidAsync("update");
+
+            var chartEventHandler = await JSRuntime.GetValueAsync<IJSObjectReference>("MyLibrary.alertOnClick");
+            await ChartRef.SetValueAsync("options.onClick", chartEventHandler);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+
+        if (ChartRef is not null)
+        {
+            try
+            {
+                await ChartRef.DisposeAsync();
+            }
+            catch (JSDisconnectedException) { }
+        }
+    }
+
+    ChartModel GetChartModel()
+    {
+        var labels = new List<string> { "Sparrow", "Robin", "Pigeon", "Crow", "Blue Jay" };
+        var dataset = new ChartDataset
+        {
+            BackgroundColor = new List<string> { "#51EAEA", "#FCDDB0", "#FF9D76", "#FB3569", "#82CD47" },
+            Data = new List<int> { 418, 263, 434, 586, 332 }
+        };
+
+        return new ChartModel
+        {
+            Type = "pie",
+            Data = new ChartData
+            {
+                Labels = labels,
+                Datasets = new List<ChartDataset> { dataset }
+            },
+            Options = new ChartOptions
+            {
+                Responsive = false,
+                Title = new ChartTitle
+                {
+                    Display = true,
+                    Text = "Bird Stats",
+                }
+            }
+        };
+    }
+}

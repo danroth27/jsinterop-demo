@@ -1,0 +1,24 @@
+@page "/wasm"
+@rendermode RenderMode.InteractiveWebAssembly
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Wasm Demo</PageTitle>
+
+<div class="mb-5">
+    <select @onchange="SetTitle" class="form-select">
+        <option value="">Select your favorite kind of rock...</option>
+        <option value="Limestone 🪨">Limestone</option>
+        <option value="Granite 🪨">Granite</option>
+        <option value="Sandstone 🪨">Sandstone</option>
+    </select>
+</div>
+
+@code {
+    IJSInProcessRuntime JSInProcessRuntime => (IJSInProcessRuntime)JSRuntime;
+
+    void SetTitle(ChangeEventArgs e)
+    {
+        var text = $"{e.Value} 🪨";
+        ((IJSInProcessRuntime)JSRuntime).SetValue("document.title", text);
+    }
+}
